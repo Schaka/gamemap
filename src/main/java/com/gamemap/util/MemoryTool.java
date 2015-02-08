@@ -53,12 +53,6 @@ public class MemoryTool {
         return process;  
     } 
     
-    public static HANDLE openProcess(int permissions, String name){
-    	HMODULE module = new HMODULE();
-    	kernel32.GetModuleHandleExA(permissions, name, module);
-    	return module;
-    }
-    
     public static int getProcessId(HANDLE handle){
     	return kernel32.GetProcessId(handle);
     }

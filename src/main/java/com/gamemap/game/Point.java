@@ -1,5 +1,7 @@
 package com.gamemap.game;
 
+import java.util.List;
+
 public class Point {
 
 	private Float x;
@@ -29,6 +31,25 @@ public class Point {
 	}
 	public void setZ(Float z) {
 		this.z = z;
+	}
+	
+	public boolean equals(Point p){
+		if(Math.round(x) != Math.round(p.getX())){
+			return false;
+		}
+		if(Math.round(y) != Math.round(p.getY())){
+			return false;
+		}
+		return true;
+	}
+	
+	public boolean alreadyInList(List<Point> list){
+		for (Point point : list) {
+			if(point.equals(this)){
+				return true;
+			}
+		}
+		return false;
 	}
 	
 	@Override
