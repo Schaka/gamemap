@@ -23,6 +23,8 @@ public interface Psapi extends StdCallLibrary{
      * http://msdn.microsoft.com/en-us/library/ms682631(VS.85).aspx
      */
     boolean EnumProcessModules(HANDLE hProcess, HMODULE[] lphModule, int cb, IntByReference lpcbNeededs);
+    
+    boolean EnumProcessModulesEx(HANDLE hProcess, HMODULE[] lphModule, int cb, IntByReference lpcbNeededs, int flags);
 
     
     /*

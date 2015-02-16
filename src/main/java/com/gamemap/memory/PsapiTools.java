@@ -31,9 +31,9 @@ public class PsapiTools {
             IntByReference pBytesReturned = new IntByReference(); 
             boolean success = psapi.EnumProcesses(pProcessIds, pProcessIds.length*Integer.SIZE/8, pBytesReturned); 
             if (!success){
-            int err=k32.GetLastError();
-        throw new Exception("EnumProcesses failed. Error: "+err);
-    }
+		        int err=k32.GetLastError();
+		        throw new Exception("EnumProcesses failed. Error: "+err);
+		    }
     
             int size = (pBytesReturned.getValue()/(Integer.SIZE/8)); 
             for (int i=0;i<size;i++)
@@ -41,7 +41,7 @@ public class PsapiTools {
             
             return list;
     }
-    
+     
     public List<Module> EnumProcessModules(HANDLE hProcess) throws Exception{
             List<Module> list = new LinkedList<Module>();
             
@@ -58,6 +58,23 @@ public class PsapiTools {
             
             return list;
     }
+    
+    public List<Module> EnumProcessModulesEx(HANDLE hProcess, int flags) throws Exception{
+        List<Module> list = new LinkedList<Module>();
+        
+        HMODULE[] lphModule = new HMODULE[1024];
+        IntByReference lpcbNeededs= new IntByReference();
+        boolean success = psapi.EnumProcessModulesEx(hProcess, lphModule, lphModule.length, lpcbNeededs, flags);
+        if (!success){
+            int err=k32.GetLastError();
+            throw new Exception("EnumProcessModules failed. Error: "+err);
+        }
+        for (int i = 0; i < lpcbNeededs.getValue()/4; i++) {
+                list.add(new Module(hProcess, lphModule[i]));
+        }
+        
+        return list;
+}
     
     public String GetModuleFileNameExA(HANDLE hProcess, HMODULE hModule){
             byte[] lpImageFileName= new byte[256];

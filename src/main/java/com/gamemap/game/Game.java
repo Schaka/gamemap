@@ -3,8 +3,6 @@ package com.gamemap.game;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.sql.XADataSource;
-
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,8 +10,12 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import com.gamemap.memory.Module;
+import com.gamemap.memory.PsapiTools;
 import com.gamemap.util.MemoryTool;
 import com.gamemap.view.Frame;
+import com.sun.jna.Pointer;
+import com.sun.jna.platform.win32.WinNT.HANDLE;
 
 @Component
 @Scope("singleton")
@@ -27,6 +29,7 @@ public class Game {
 	private List<Map> maps;
 	private Integer pId = MemoryTool.getProcessIdByWindow("The Long Dark");
 	private Point currentPoint;
+	private Integer baseAddress;
 	
 	@Value("${game.memory.x}")
 	private Integer xAddress;
@@ -56,35 +59,10 @@ public class Game {
 	@Scheduled(fixedDelay=1000, initialDelay = 1200)
 	public void updatePosition(){
 		
-//		Float x = MemoryTool.readMemory(MemoryTool.openProcess(MemoryTool.READ_RIGHT, pId), 0x5AAF8F68, 4).getFloat(0);
-//		Float y = MemoryTool.readMemory(MemoryTool.openProcess(MemoryTool.READ_RIGHT, pId), 0x5AAF8F70, 4).getFloat(0);
-//		Float z = MemoryTool.readMemory(MemoryTool.openProcess(MemoryTool.READ_RIGHT, pId), 0x5AAF8F6C, 4).getFloat(0);
-		
-		/*try {
-			HANDLE game = MemoryTool.openProcess(MemoryTool.PROCESS_ALL_ACCESS, pId);
-			List<Module> modules = PsapiTools.getInstance().EnumProcessModules(game);
-			//Pointer p = MemoryTool.openProcess(MemoryTool.PROCESS_ALL_ACCESS, pId).getPointer();
-			
-			for (Module module : modules) {
-				//log.info(module.getFileName());
-				log.info(module.getBaseName());
-				if(module.getFileName().contains("tld.exe")){		
-					if(module.getEntryPoint() != null){
-						log.info(module.getBaseName() + " 0x" + Long.toHexString(Pointer.nativeValue(module.getEntryPoint().getPointer())));
-					}
-					if(module.getLpBaseOfDll() != null){
-						log.info(module.getBaseName() + " 0x" + Long.toHexString(Pointer.nativeValue(module.getLpBaseOfDll().getPointer())));
-					}
-				}
-			}
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}*/
-		
-		Float x = MemoryTool.readMemory(MemoryTool.openProcess(MemoryTool.READ_RIGHT, pId), xAddress, 4).getFloat(0);
-		Float y = MemoryTool.readMemory(MemoryTool.openProcess(MemoryTool.READ_RIGHT, pId), yAddress, 4).getFloat(0);
-		Float z = MemoryTool.readMemory(MemoryTool.openProcess(MemoryTool.READ_RIGHT, pId), zAddress, 4).getFloat(0);
+		findBaseAddress();	
+		Float x = MemoryTool.readMemory(MemoryTool.openProcess(MemoryTool.READ_RIGHT, pId), baseAddress+xAddress, 4).getFloat(0);
+		Float y = MemoryTool.readMemory(MemoryTool.openProcess(MemoryTool.READ_RIGHT, pId), baseAddress+yAddress, 4).getFloat(0);
+		Float z = MemoryTool.readMemory(MemoryTool.openProcess(MemoryTool.READ_RIGHT, pId), baseAddress+zAddress, 4).getFloat(0);
 		
 		
 		
@@ -100,15 +78,32 @@ public class Game {
 		}else{
 			Location loc = new Location(currentPoint == null ? new Point(0f, 0f, 0f) : currentPoint);
 			loc.setName("Building"); //TODO: read name from current "point" in memory
-			if(!isDuplicatePoint(loc)){
-				currentMap.addPoint(loc);
-				frame.paintLastPoint();
-			}
+			currentMap.addPoint(loc);
+			frame.paintLastPoint();
 			
 		}
 		
 		currentMap.addObserver(frame);
 		//log.info(currentPoint);
+	}
+
+	private void findBaseAddress() {
+		if(baseAddress == null){
+			try {
+				HANDLE game = MemoryTool.openProcess(MemoryTool.PROCESS_ALL_ACCESS, pId);
+				List<Module> modules = PsapiTools.getInstance().EnumProcessModulesEx(game, 0x01);
+				for (Module module : modules) {
+					if(module.getBaseName().equals("AkSoundEngine.dll")){		
+						if(module.getLpBaseOfDll() != null){
+							log.info(module.getBaseName() + " found at 0x" + Long.toHexString(Pointer.nativeValue(module.getLpBaseOfDll().getPointer())));
+							baseAddress = ((Long)Pointer.nativeValue(module.getLpBaseOfDll().getPointer())).intValue();
+						}
+					}
+				}
+			} catch (Exception e) {
+				log.error("Error finding base address");
+			}			
+		}
 	}
 
 	public Point getCurrentPoint() {
